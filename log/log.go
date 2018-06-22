@@ -3,7 +3,7 @@ package log
 import "github.com/lpar/blammo"
 
 // Logger is the global logger
-var Logger = blammo.NewConsoleLogger()
+var Logger = blammo.NewLogger()
 
 // Debug returns a debug level logging event you can add values and messages to
 func Debug() *blammo.Event {

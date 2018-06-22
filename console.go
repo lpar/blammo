@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const bufferSize = 80
@@ -69,6 +71,24 @@ func NewConsoleLogger() *Logger {
 	return l
 }
 
+// NewPipeLogger creates a new logger with output to stdout and stderr,
+// no ANSI codes, and timestamps to 1 second precision.
+func NewPipeLogger() *Logger {
+	l := &Logger{
+		ErrorWriter: os.Stderr,
+		InfoWriter:  os.Stdout,
+		DebugWriter: nil,
+		Timestamp:   timestampFormat,
+		ErrorTag:    []byte("[ERROR] "),
+		WarnTag:     []byte("[WARN ] "),
+		InfoTag:     []byte("[INFO ] "),
+		DebugTag:    []byte("[DEBUG] "),
+		KeyStart:    []byte(""),
+		KeyEnd:      []byte(""),
+	}
+	return l
+}
+
 // NewFileLogger creates a new logger with output to the error and info log
 // filenames provided, no ANSI codes, and timestamps to 1 second precision.
 func NewFileLogger(errlog string, infolog string) (*Logger, error) {
@@ -97,6 +117,15 @@ func NewFileLogger(errlog string, infolog string) (*Logger, error) {
 		},
 	}
 	return l, nil
+}
+
+// NewLogger attempts to determine whether stdout is connected to the console. If so,
+// it returns a ConsoleLogger; if not, it returns a PipeLogger.
+func NewLogger() *Logger {
+	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+		return NewConsoleLogger()
+	}
+	return NewPipeLogger()
 }
 
 // Close closes any open log files.
