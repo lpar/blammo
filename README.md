@@ -23,7 +23,7 @@ Simple usage:
     import "github.com/lpar/blammo/log"
 
     // turn on debug output for default logger at runtime
-    Logger.Debug.Writer = os.Stderr 
+    log.SetDebug(true)
 
     log.Info().Msg("Hello sailor")
     log.Debug().Int("x", 6).Msg("Debug info")

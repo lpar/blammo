@@ -1,6 +1,10 @@
 package log
 
-import "github.com/lpar/blammo"
+import (
+	"os"
+
+	"github.com/lpar/blammo"
+)
 
 // Logger is the global logger
 var Logger = blammo.NewLogger()
@@ -23,4 +27,13 @@ func Warn() *blammo.Event {
 // Error returns an error level logging event you can add values and messages to
 func Error() *blammo.Event {
 	return Logger.Error()
+}
+
+// SetDebug switches debugging on or off
+func SetDebug(enabled bool) {
+	if enabled {
+		Logger.DebugWriter = os.Stderr
+		return
+	}
+	Logger.DebugWriter = nil
 }
