@@ -89,6 +89,24 @@ func NewPipeLogger() *Logger {
 	return l
 }
 
+// NewCloudLogger creates a new logger with output to stdout and stderr,
+// no ANSI codes or timestamps.
+func NewCloudLogger() *Logger {
+	l := &Logger{
+		ErrorWriter: os.Stderr,
+		InfoWriter:  os.Stdout,
+		DebugWriter: nil,
+		Timestamp:   "",
+		ErrorTag:    []byte("[ERROR] "),
+		WarnTag:     []byte("[WARN ] "),
+		InfoTag:     []byte("[INFO ] "),
+		DebugTag:    []byte("[DEBUG] "),
+		KeyStart:    []byte(""),
+		KeyEnd:      []byte(""),
+	}
+	return l
+}
+
 // NewFileLogger creates a new logger with output to the error and info log
 // filenames provided, no ANSI codes, and timestamps to 1 second precision.
 func NewFileLogger(errlog string, infolog string) (*Logger, error) {
@@ -223,6 +241,9 @@ func (e *Event) Bytes(key string, value []byte) *Event {
 
 // Err adds an error message as the @error key
 func (e *Event) Err(err error) *Event {
+	if err == nil {
+		return e.Str("@error", "nil");
+	}
 	return e.Str("@error", err.Error())
 }
 
