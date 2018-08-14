@@ -228,6 +228,9 @@ func (e *Event) Str(key string, value string) *Event {
 
 // Bool adds a key (variable name) and boolean to the logging event.
 func (e *Event) Bool(key string, value bool) *Event {
+	if e == nil {
+		return e
+	}
 	if value {
 		return e.Str(key, "true")
 	}
@@ -236,11 +239,17 @@ func (e *Event) Bool(key string, value bool) *Event {
 
 // Bytes adds a key (variable name) and slice of bytes to the logging event in hex.
 func (e *Event) Bytes(key string, value []byte) *Event {
+	if e == nil {
+		return e
+	}
 	return e.Str(key, hex.EncodeToString(value))
 }
 
 // Err adds an error message as the @error key
 func (e *Event) Err(err error) *Event {
+	if e == nil {
+		return e
+	}
 	if err == nil {
 		return e.Str("@error", "nil");
 	}
@@ -249,6 +258,9 @@ func (e *Event) Err(err error) *Event {
 
 // Float32 adds a key (variable name) and float32 to the logging event.
 func (e *Event) Float32(key string, f float32) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendFloat(e.txt, float64(f), 'G', -1, 32)
 	e.txt = append(e.txt, ' ')
@@ -257,6 +269,9 @@ func (e *Event) Float32(key string, f float32) *Event {
 
 // Float64 adds a key (variable name) and float64 to the logging event.
 func (e *Event) Float64(key string, f float64) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendFloat(e.txt, float64(f), 'G', -1, 32)
 	e.txt = append(e.txt, ' ')
@@ -265,11 +280,17 @@ func (e *Event) Float64(key string, f float64) *Event {
 
 // Int adds a key (variable name) and integer to the logging event.
 func (e *Event) Int(key string, value int) *Event {
+	if e == nil {
+		return e
+	}
 	return e.Str(key, strconv.Itoa(value))
 }
 
 // Uint8 adds a key (variable name) and integer to the logging event.
 func (e *Event) Uint8(key string, value uint8) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendUint(e.txt, uint64(value), 10)
 	e.txt = append(e.txt, ' ')
@@ -278,6 +299,9 @@ func (e *Event) Uint8(key string, value uint8) *Event {
 
 // Int8 adds a key (variable name) and integer to the logging event.
 func (e *Event) Int8(key string, value int8) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendInt(e.txt, int64(value), 10)
 	e.txt = append(e.txt, ' ')
@@ -286,6 +310,9 @@ func (e *Event) Int8(key string, value int8) *Event {
 
 // Uint16 adds a key (variable name) and integer to the logging event.
 func (e *Event) Uint16(key string, value uint16) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendUint(e.txt, uint64(value), 10)
 	e.txt = append(e.txt, ' ')
@@ -294,6 +321,9 @@ func (e *Event) Uint16(key string, value uint16) *Event {
 
 // Int16 adds a key (variable name) and integer to the logging event.
 func (e *Event) Int16(key string, value int16) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendInt(e.txt, int64(value), 10)
 	e.txt = append(e.txt, ' ')
@@ -302,6 +332,9 @@ func (e *Event) Int16(key string, value int16) *Event {
 
 // Uint32 adds a key (variable name) and integer to the logging event.
 func (e *Event) Uint32(key string, value uint32) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendUint(e.txt, uint64(value), 10)
 	e.txt = append(e.txt, ' ')
@@ -310,6 +343,9 @@ func (e *Event) Uint32(key string, value uint32) *Event {
 
 // Int32 adds a key (variable name) and integer to the logging event.
 func (e *Event) Int32(key string, value int32) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendInt(e.txt, int64(value), 10)
 	e.txt = append(e.txt, ' ')
@@ -318,6 +354,9 @@ func (e *Event) Int32(key string, value int32) *Event {
 
 // Uint64 adds a key (variable name) and integer to the logging event.
 func (e *Event) Uint64(key string, value uint64) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendUint(e.txt, value, 10)
 	e.txt = append(e.txt, ' ')
@@ -326,6 +365,9 @@ func (e *Event) Uint64(key string, value uint64) *Event {
 
 // Int64 adds a key (variable name) and integer to the logging event.
 func (e *Event) Int64(key string, value int64) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	e.txt = strconv.AppendInt(e.txt, value, 10)
 	e.txt = append(e.txt, ' ')
@@ -334,6 +376,9 @@ func (e *Event) Int64(key string, value int64) *Event {
 
 // Time adds a key (variable name) and time to the logging event.
 func (e *Event) Time(key string, value time.Time) *Event {
+	if e == nil {
+		return e
+	}
 	e.appendKey(key)
 	tv, err := value.MarshalText()
 	if err != nil {
@@ -375,12 +420,18 @@ func (e *Event) writeCaller(n int) *Event {
 // Line writes the current line number and file of the source code as the
 // @line and @file keys.
 func (e *Event) Line() *Event {
+	if e == nil {
+		return e
+	}
 	return e.writeCaller(2)
 }
 
 // Caller writes the line number and file of the source code that the current
 // function was called from, as the @c_line and @c_file keys.
 func (e *Event) Caller() *Event {
+	if e == nil {
+		return e
+	}
 	return e.writeCaller(3)
 }
 
@@ -400,6 +451,9 @@ func (e *Event) Msg(msg string) {
 // Msgf writes a message formatted as per fmt.Sprintf. It's likely to be slower
 // than any other log event method.
 func (e *Event) Msgf(fmtstr string, vals ...interface{}) {
+	if e == nil {
+		return
+	}
 	msg := fmt.Sprintf(fmtstr, vals...)
 	e.Msg(msg)
 }

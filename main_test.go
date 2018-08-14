@@ -2,7 +2,7 @@ package blammo
 
 import (
 	"testing"
-)
+	)
 
 var spliceTests = []struct {
 	txt string
