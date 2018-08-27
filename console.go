@@ -407,7 +407,7 @@ func abbreviate(path string) string {
 
 func (e *Event) writeCaller(n int) *Event {
 	_, fn, line, _ := runtime.Caller(n)
-	if n == 2 {
+	if n == 3 {
 		e.Int("@line", line)
 		e.Str("@file", abbreviate(fn))
 	} else {
@@ -423,7 +423,7 @@ func (e *Event) Line() *Event {
 	if e == nil {
 		return e
 	}
-	return e.writeCaller(2)
+	return e.writeCaller(3)
 }
 
 // Caller writes the line number and file of the source code that the current
@@ -432,7 +432,7 @@ func (e *Event) Caller() *Event {
 	if e == nil {
 		return e
 	}
-	return e.writeCaller(3)
+	return e.writeCaller(4)
 }
 
 // Msg writes the accumulated log entry to the log, along with the
