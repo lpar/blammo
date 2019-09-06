@@ -112,11 +112,11 @@ func NewCloudLogger() *Logger {
 func NewFileLogger(errlog string, infolog string) (*Logger, error) {
 	ferrlog, err := os.OpenFile(errlog, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
-		return nil, fmt.Errorf("can't open error log: %v", err)
+		return nil, fmt.Errorf("can't open error log: %w", err)
 	}
 	finfolog, err := os.OpenFile(infolog, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
-		return nil, fmt.Errorf("can't open info log: %v", err)
+		return nil, fmt.Errorf("can't open info log: %w", err)
 	}
 	l := &Logger{
 		ErrorWriter: ferrlog,
@@ -251,7 +251,7 @@ func (e *Event) Err(err error) *Event {
 		return e
 	}
 	if err == nil {
-		return e.Str("@error", "nil");
+		return e.Str("@error", "nil")
 	}
 	return e.Str("@error", err.Error())
 }
@@ -382,7 +382,7 @@ func (e *Event) Time(key string, value time.Time) *Event {
 	e.appendKey(key)
 	tv, err := value.MarshalText()
 	if err != nil {
-		tv = []byte(fmt.Sprintf("error marshaling time: %v", err))
+		tv = []byte(fmt.Sprintf("error marshaling time: %w", err))
 	}
 	e.txt = append(e.txt, tv...)
 	e.txt = append(e.txt, ' ')
