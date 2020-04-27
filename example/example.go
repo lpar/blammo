@@ -7,7 +7,7 @@ import (
 )
 
 func example() {
-	log.Error().Caller().Msg("Some terrible error occurred")
+	log.Error().Msg("Some terrible error occurred")
 }
 
 func main() {

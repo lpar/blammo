@@ -26,7 +26,7 @@ func Warn() *blammo.Event {
 
 // Error returns an error level logging event you can add values and messages to
 func Error() *blammo.Event {
-	return Logger.Error().Line().Caller()
+	return Logger.Error().CallStack()
 }
 
 // SetDebug switches debugging on or off

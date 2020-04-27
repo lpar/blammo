@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,13 +18,20 @@ const bufferSize = 80
 
 const timestampFormat = "2006-01-02 15:04:05 "
 
-type Logger struct {
-	ErrorWriter io.Writer
-	InfoWriter  io.Writer
-	DebugWriter io.Writer
+// Levels of call stack to skip because of code internal to blammo
+const blammoLevels = 3
 
-	Timestamp string
-	UTC       bool
+// Logger represents an object you can create log events from.
+type Logger struct {
+	ErrorWriter io.Writer // where to send Error() events
+	InfoWriter  io.Writer // where to send Info() events
+	DebugWriter io.Writer // where to send Debug() events
+
+	Timestamp string // format string for timestamps
+	UTC       bool // whether to write timestamps in UTC
+
+	MaxCallLevels int // how many call levels CallStack() should write
+	IncludeSystemFiles bool // whether to include system source files in the call stack
 
 	ErrorTag []byte
 	WarnTag  []byte
@@ -35,13 +43,15 @@ type Logger struct {
 	Closer func()
 }
 
-// Event represents the text collected for output to a given log Writer
+// Event represents the text collected for output to a given log Writer.
 type Event struct {
 	txt      []byte
 	tag      []byte
 	keyStart []byte
 	keyEnd   []byte
 	msgpos   int
+	callLevels int
+	withSystem bool
 	out      io.Writer
 }
 
@@ -57,16 +67,17 @@ var eventPool = &sync.Pool{
 // ANSI colored logging level tags, and timestamps to 1 second precision.
 func NewConsoleLogger() *Logger {
 	l := &Logger{
-		ErrorWriter: os.Stderr,
-		InfoWriter:  os.Stdout,
-		DebugWriter: nil,
-		Timestamp:   timestampFormat,
-		ErrorTag:    []byte("[\x1b[91mERROR\x1b[0m] "),
-		WarnTag:     []byte("[\x1b[93mWARN\x1b[0m ] "),
-		InfoTag:     []byte("[\x1b[92mINFO\x1b[0m ] "),
-		DebugTag:    []byte("[\x1b[37mDEBUG\x1b[0m] "),
-		KeyStart:    []byte("\x1b[36m"),
-		KeyEnd:      []byte("\x1b[0m"),
+		ErrorWriter:   os.Stderr,
+		InfoWriter:    os.Stdout,
+		DebugWriter:   nil,
+		Timestamp:     timestampFormat,
+		MaxCallLevels: 3,
+		ErrorTag:      []byte("[\x1b[91mERROR\x1b[0m] "),
+		WarnTag:       []byte("[\x1b[93mWARN\x1b[0m ] "),
+		InfoTag:       []byte("[\x1b[92mINFO\x1b[0m ] "),
+		DebugTag:      []byte("[\x1b[37mDEBUG\x1b[0m] "),
+		KeyStart:      []byte("\x1b[36m"),
+		KeyEnd:        []byte("\x1b[0m"),
 	}
 	return l
 }
@@ -75,34 +86,36 @@ func NewConsoleLogger() *Logger {
 // no ANSI codes, and timestamps to 1 second precision.
 func NewPipeLogger() *Logger {
 	l := &Logger{
-		ErrorWriter: os.Stderr,
-		InfoWriter:  os.Stdout,
-		DebugWriter: nil,
-		Timestamp:   timestampFormat,
-		ErrorTag:    []byte("[ERROR] "),
-		WarnTag:     []byte("[WARN ] "),
-		InfoTag:     []byte("[INFO ] "),
-		DebugTag:    []byte("[DEBUG] "),
-		KeyStart:    []byte(""),
-		KeyEnd:      []byte(""),
+		ErrorWriter:   os.Stderr,
+		InfoWriter:    os.Stdout,
+		DebugWriter:   nil,
+		Timestamp:     timestampFormat,
+		MaxCallLevels: 3,
+		ErrorTag:      []byte("[ERROR] "),
+		WarnTag:       []byte("[WARN ] "),
+		InfoTag:       []byte("[INFO ] "),
+		DebugTag:      []byte("[DEBUG] "),
+		KeyStart:      []byte(""),
+		KeyEnd:        []byte(""),
 	}
 	return l
 }
 
 // NewCloudLogger creates a new logger with output to stdout and stderr,
-// no ANSI codes or timestamps.
+// no ANSI codes or timestamps. Suitable for Cloud Foundry, OpenShift, etc.
 func NewCloudLogger() *Logger {
 	l := &Logger{
-		ErrorWriter: os.Stderr,
-		InfoWriter:  os.Stdout,
-		DebugWriter: nil,
-		Timestamp:   "",
-		ErrorTag:    []byte("[ERROR] "),
-		WarnTag:     []byte("[WARN ] "),
-		InfoTag:     []byte("[INFO ] "),
-		DebugTag:    []byte("[DEBUG] "),
-		KeyStart:    []byte(""),
-		KeyEnd:      []byte(""),
+		ErrorWriter:   os.Stderr,
+		InfoWriter:    os.Stdout,
+		DebugWriter:   nil,
+		Timestamp:     "",
+		MaxCallLevels: 3,
+		ErrorTag:      []byte("[ERROR] "),
+		WarnTag:       []byte("[WARN ] "),
+		InfoTag:       []byte("[INFO ] "),
+		DebugTag:      []byte("[DEBUG] "),
+		KeyStart:      []byte(""),
+		KeyEnd:        []byte(""),
 	}
 	return l
 }
@@ -119,16 +132,17 @@ func NewFileLogger(errlog string, infolog string) (*Logger, error) {
 		return nil, fmt.Errorf("can't open info log: %w", err)
 	}
 	l := &Logger{
-		ErrorWriter: ferrlog,
-		InfoWriter:  finfolog,
-		DebugWriter: nil,
-		Timestamp:   timestampFormat,
-		ErrorTag:    []byte("[ERROR] "),
-		WarnTag:     []byte("[WARN ] "),
-		InfoTag:     []byte("[INFO ] "),
-		DebugTag:    []byte("[DEBUG] "),
-		KeyStart:    []byte(""),
-		KeyEnd:      []byte(""),
+		ErrorWriter:   ferrlog,
+		InfoWriter:    finfolog,
+		DebugWriter:   nil,
+		Timestamp:     timestampFormat,
+		MaxCallLevels: 3,
+		ErrorTag:      []byte("[ERROR] "),
+		WarnTag:       []byte("[WARN ] "),
+		InfoTag:       []byte("[INFO ] "),
+		DebugTag:      []byte("[DEBUG] "),
+		KeyStart:      []byte(""),
+		KeyEnd:        []byte(""),
 		Closer: func() {
 			ferrlog.Close()
 			finfolog.Close()
@@ -137,11 +151,15 @@ func NewFileLogger(errlog string, infolog string) (*Logger, error) {
 	return l, nil
 }
 
-// NewLogger attempts to determine whether stdout is connected to the console. If so,
-// it returns a ConsoleLogger; if not, it returns a PipeLogger.
+// NewLogger attempts to determine whether stdout is connected to the console. If so, it returns a ConsoleLogger; if
+// not, it looks for the PORT environment variable to determine whether to return a CloudLogger. If that isn't found, it
+// returns a PipeLogger.
 func NewLogger() *Logger {
 	if terminal.IsTerminal(int(os.Stdout.Fd())) {
 		return NewConsoleLogger()
+	}
+	if os.Getenv("PORT") != "" {
+		return NewCloudLogger()
 	}
 	return NewPipeLogger()
 }
@@ -171,6 +189,8 @@ func (l *Logger) newEvent(w io.Writer, tag []byte) *Event {
 	}
 	e.txt = append(e.txt, tag...)
 	e.msgpos = len(e.txt)
+	e.callLevels = l.MaxCallLevels
+	e.withSystem = l.IncludeSystemFiles
 	return e
 }
 
@@ -382,7 +402,7 @@ func (e *Event) Time(key string, value time.Time) *Event {
 	e.appendKey(key)
 	tv, err := value.MarshalText()
 	if err != nil {
-		tv = []byte(fmt.Sprintf("error marshaling time: %w", err))
+		tv = []byte(fmt.Sprintf("error marshaling time: %v", err))
 	}
 	e.txt = append(e.txt, tv...)
 	e.txt = append(e.txt, ' ')
@@ -405,34 +425,61 @@ func abbreviate(path string) string {
 	return path[ps:]
 }
 
-func (e *Event) writeCaller(n int) *Event {
-	_, fn, line, _ := runtime.Caller(n)
-	if n == 3 {
-		e.Int("@line", line)
-		e.Str("@file", abbreviate(fn))
-	} else {
-		e.Int("@c_line", line)
-		e.Str("@c_file", abbreviate(fn))
+func (e *Event) writeCallStack(maxlevels int) *Event {
+	if maxlevels == 0 {
+		return e
+	}
+  goroot := runtime.GOROOT()
+  n := 0
+  fn := ""
+  line := 0
+	ok := true
+	lvl := '0'
+	walo := false
+	for ok && n < maxlevels {
+		_, fn, line, ok = runtime.Caller(n+blammoLevels)
+		if ok {
+			if e.withSystem || !strings.HasPrefix(fn, goroot) {
+				e.Str("@file_"+string(lvl), abbreviate(fn))
+				e.Int("@line_"+string(lvl), line)
+				lvl++
+				walo = true
+			}
+		}
+		n++
+	}
+	if !walo {
+		e.Str("@file_0", "unavailable")
 	}
 	return e
 }
 
 // Line writes the current line number and file of the source code as the
-// @line and @file keys.
+// @line_0 and @file_0 keys.
 func (e *Event) Line() *Event {
 	if e == nil {
 		return e
 	}
-	return e.writeCaller(3)
+	return e.writeCallStack(1)
 }
 
 // Caller writes the line number and file of the source code that the current
-// function was called from, as the @c_line and @c_file keys.
+// function was called from, as the @line_1 and @file_1 keys, as well as the
+// current line and file as @line_0 and @file_0.
 func (e *Event) Caller() *Event {
 	if e == nil {
 		return e
 	}
-	return e.writeCaller(4)
+	return e.writeCallStack(2)
+}
+
+// CallStack() writes a call stack as @file_0..@file_n and @line_0..@line_n.
+// The number of levels written is limited by the value of Logger.MaxCallLevels.
+func (e *Event) CallStack() *Event {
+	if e == nil {
+		return e
+	}
+	return e.writeCallStack(e.callLevels)
 }
 
 // Msg writes the accumulated log entry to the log, along with the

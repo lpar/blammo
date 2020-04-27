@@ -69,7 +69,7 @@ addresses; just use their `.String()` method.
 
 An added option zerolog lacks is the `Msgf()` method. This works like
 `fmt.Printf`, and is consequently relatively slow, but is there to make it easy
-to migrate code from other loggers that use a Printf-style interface (like my
-own [first cut at a logging wrapper](http://github.com/lpar/log). It's also
-convenient for user-visible error messages where speed isn't a major concern.
+to migrate code from other loggers that use a Printf-style interface 
+It's also convenient for user-visible error messages where speed isn't a major 
+concern.
 
