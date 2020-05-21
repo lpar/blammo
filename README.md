@@ -1,6 +1,8 @@
 
 # Blammo
 
+[![GoDoc](https://godoc.org/github.com/lpar/blammo?status.svg)](https://godoc.org/github.com/lpar/blammo)
+
 This is a simple console logger for Go which supports:
 
  - High performance logging (zero allocations)
